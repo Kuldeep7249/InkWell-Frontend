@@ -1,0 +1,1 @@
+export default function EmptyState({title='Nothing here',text='No records found.'}){return <div className='card py-12 text-center'><h3 className='text-xl font-bold'>{title}</h3><p className='mt-2 text-slate-500'>{text}</p></div>;}

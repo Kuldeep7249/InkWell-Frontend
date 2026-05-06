@@ -1,0 +1,1 @@
+export const ROLES=['READER','AUTHOR','ADMIN']; export const POST_STATUS=['PENDING','APPROVED','REJECTED'];
