@@ -63,6 +63,22 @@ function resolveServiceBaseUrl(url = '') {
 
 export const api = axios.create();
 
+function extractErrorMessage(data, fallbackMessage) {
+  if (typeof data === 'string' && data.trim()) return data;
+  if (typeof data?.message === 'string' && data.message.trim()) return data.message;
+  if (typeof data?.error === 'string' && data.error.trim()) return data.error;
+
+  if (data && typeof data === 'object') {
+    const values = Object.values(data)
+      .flatMap((value) => Array.isArray(value) ? value : [value])
+      .filter((value) => typeof value === 'string' && value.trim());
+
+    if (values.length) return values[0];
+  }
+
+  return fallbackMessage;
+}
+
 api.interceptors.request.use((config)=>{
   config.baseURL = resolveServiceBaseUrl(config.url);
   const token=tokenStorage.getAccess();
@@ -72,7 +88,7 @@ api.interceptors.request.use((config)=>{
 
 api.interceptors.response.use(r=>r, e=>{
   const status=e?.response?.status;
-  const msg=e?.response?.data?.message || e?.response?.data?.error || e?.message;
+  const msg=extractErrorMessage(e?.response?.data, e?.message);
   const silentErrors = Boolean(e?.config?.silentErrors);
   if(status===401){
     tokenStorage.clear();

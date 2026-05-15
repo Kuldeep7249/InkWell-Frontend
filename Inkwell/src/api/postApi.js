@@ -11,7 +11,7 @@ function buildLegacyPayload(payload = {}) {
 
 function shouldRetryWithLegacyShape(error) {
   const status = error?.response?.status;
-  return status === 400 || status === 415;
+  return status === 415;
 }
 
 async function createPostCompatible(payload) {

@@ -9,7 +9,6 @@ import DashboardLayout from '../components/dashboard/DashboardLayout.jsx';
 import PostForm from '../components/post/PostForm.jsx';
 import { useAuth } from '../hooks/useAuth.js';
 import { useApi } from '../hooks/useApi.js';
-import { unwrap } from '../utils/helpers.js';
 
 const items = [
   { to: '/author', label: 'Overview' },
@@ -17,14 +16,6 @@ const items = [
   { to: '/author/posts/new', label: 'Create post' },
   { to: '/author/media', label: 'Media library' }
 ];
-
-async function assignTaxonomy(postId, categoryId, tagIds) {
-  if (categoryId != null) {
-    await categoryApi.addCategoryToPost({ postId, categoryId });
-  }
-
-  await Promise.all((tagIds || []).map((tagId) => tagApi.addTagToPost({ postId, tagId })));
-}
 
 export default function CreatePost() {
   const navigate = useNavigate();
@@ -48,18 +39,12 @@ export default function CreatePost() {
 
     try {
       setSubmitting(true);
-      const response = await postApi.createPost(payload);
-      const created = unwrap(response);
-      const postId = created?.id ?? created?.postId;
-
-      if (postId) {
-        await assignTaxonomy(postId, values.categoryId, values.tagIds || []);
-      }
+      await postApi.createPost(payload);
 
       toast.success('Post created');
       navigate('/author/posts');
     } catch (error) {
-      console.error('Create post failed', error);
+      console.error('Create post failed', error?.response?.data || error);
     } finally {
       setSubmitting(false);
     }
