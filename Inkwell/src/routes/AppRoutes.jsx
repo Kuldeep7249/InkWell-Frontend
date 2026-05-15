@@ -3,6 +3,7 @@ import Home from '../pages/public/Home.jsx';
 import Search from '../pages/public/Search.jsx';
 import PostDetail from '../pages/public/PostDetail.jsx';
 import Login from '../pages/auth/Login.jsx';
+import OAuthSuccess from '../pages/auth/OAuthSuccess.jsx';
 import Register from '../pages/auth/Register.jsx';
 import AccessDenied from '../pages/auth/AccessDenied.jsx';
 import Profile from '../pages/reader/Profile.jsx';
@@ -25,6 +26,7 @@ export default function AppRoutes(){
     <Route path="/search" element={<Search/>}/>
     <Route path="/blog/:id" element={<PostDetail/>}/>
     <Route path="/login" element={<Login/>}/>
+    <Route path="/oauth2/success" element={<OAuthSuccess/>}/>
     <Route path="/register" element={<Register/>}/>
     <Route path="/access-denied" element={<AccessDenied/>}/>
 

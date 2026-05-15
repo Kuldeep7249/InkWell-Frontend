@@ -82,6 +82,7 @@ function MediaPreview({media}){
 export default function MediaLibrary(){
   const {user}=useAuth(); const [file,setFile]=useState(null); const [altText,setAlt]=useState('');
   const [localPreview,setLocalPreview]=useState('');
+  const [deletingId,setDeletingId]=useState(null);
   const {data,setData}=useApi(()=>mediaApi.byUploader(user.userId),[user.userId]);
 
   useEffect(()=>{
@@ -111,6 +112,17 @@ export default function MediaLibrary(){
     toast.success('Media uploaded');
   };
 
+  const removeMedia=async(mediaId)=>{
+    try{
+      setDeletingId(mediaId);
+      await mediaApi.deleteMedia(mediaId);
+      setData((current=[])=>current.filter((item)=> (item.mediaId || item.id) !== mediaId));
+      toast.success('Media deleted');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return <DashboardLayout title="Media library" items={items}>
     <form onSubmit={upload} className="card mb-6 grid gap-4 md:grid-cols-[1.2fr_1fr_auto]">
       <input className="input" type="file" onChange={e=>setFile(e.target.files[0]||null)}/>
@@ -123,14 +135,27 @@ export default function MediaLibrary(){
     </form>
 
     <div className="grid gap-4 md:grid-cols-3">
-      {mediaItems.map(m=><div className="card" key={m.mediaId || m.id}>
-        <MediaPreview media={m} />
-        <p className="mt-4 font-bold">{m.originalName||m.filename||m.name||'Untitled media'}</p>
-        {m.altText ? <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{m.altText}</p> : null}
-        <a href={resolveMediaUrl(m)} target="_blank" rel="noreferrer" className="mt-2 block break-all text-sm text-indigo-600">
-          {resolveMediaUrl(m)}
-        </a>
-      </div>)}
+      {mediaItems.map(m=>{
+        const mediaId=m.mediaId || m.id;
+        const busy=deletingId === mediaId;
+
+        return <div className="card" key={mediaId}>
+          <MediaPreview media={m} />
+          <p className="mt-4 font-bold">{m.originalName||m.filename||m.name||'Untitled media'}</p>
+          {m.altText ? <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{m.altText}</p> : null}
+          <a href={resolveMediaUrl(m)} target="_blank" rel="noreferrer" className="mt-2 block break-all text-sm text-indigo-600">
+            {resolveMediaUrl(m)}
+          </a>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={()=>removeMedia(mediaId)}
+            className="mt-4 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {busy ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>;
+      })}
     </div>
   </DashboardLayout>;
 }

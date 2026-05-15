@@ -112,12 +112,23 @@ export default function Home() {
 
   return (
     <Layout>
-      <section className="mb-8 rounded-3xl bg-gradient-to-br from-indigo-600 to-slate-950 p-10 text-white">
-        <p className="font-semibold text-indigo-100">InkWell</p>
-        <h1 className="mt-2 max-w-3xl text-5xl font-black">Write. Publish. Connect. Inspire.</h1>
-        <p className="mt-4 max-w-2xl text-indigo-100">
-          Explore stories organized by category, discover what matters to you, and move between topics without losing the bigger picture.
-        </p>
+      <section className="relative mb-12 overflow-hidden rounded-[2.5rem] bg-slate-950 px-8 py-16 sm:px-12 sm:py-24 border border-slate-800 shadow-2xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/30 via-purple-600/10 to-slate-950 mix-blend-multiply" />
+        <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-indigo-500 blur-[120px] opacity-40" />
+        <div className="absolute -bottom-20 -right-20 h-72 w-72 rounded-full bg-purple-500 blur-[120px] opacity-40" />
+        
+        <div className="relative z-10">
+          <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-indigo-100 backdrop-blur-md border border-white/10 mb-4 shadow-xl">
+            <span className="h-2 w-2 rounded-full bg-indigo-400 animate-pulse"></span>
+            Welcome to InkWell
+          </p>
+          <h1 className="mt-4 max-w-4xl text-5xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl">
+            Write. Publish. <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Connect. Inspire.</span>
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg text-slate-300 leading-relaxed font-medium">
+            Explore stories organized by category, discover what matters to you, and move between topics without losing the bigger picture.
+          </p>
+        </div>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
@@ -141,7 +152,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setActiveCategory('all')}
-                className={activeCategory === 'all' ? 'btn-primary' : 'btn-muted'}
+                className={`!rounded-full ${activeCategory === 'all' ? 'btn-primary' : 'btn-muted'}`}
               >
                 All categories
               </button>
@@ -151,7 +162,7 @@ export default function Home() {
                   key={group.id}
                   type="button"
                   onClick={() => setActiveCategory(group.id)}
-                  className={activeCategory === group.id ? 'btn-primary' : 'btn-muted'}
+                  className={`!rounded-full ${activeCategory === group.id ? 'btn-primary' : 'btn-muted'}`}
                 >
                   {group.name} ({group.posts.length})
                 </button>

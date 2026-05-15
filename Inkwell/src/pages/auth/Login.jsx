@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import Layout from '../../components/layout/Layout.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 
@@ -20,6 +21,12 @@ function getSocialBaseUrl() {
     env.VITE_GATEWAY_API_URL ||
     stripKnownPath(env.VITE_API_BASE_URL || env.VITE_AUTH_API_URL || '')
   );
+}
+
+function getRedirectTarget(role) {
+  if (role === 'ADMIN') return '/admin';
+  if (role === 'AUTHOR') return '/author';
+  return '/';
 }
 
 function SocialButton({ href, onClick, label, children }) {
@@ -57,8 +64,11 @@ function GitHubIcon() {
 
 export default function Login() {
   const [form, setForm] = useState({ emailOrUsername: '', password: '' });
-  const { login } = useAuth();
+  const [otpState, setOtpState] = useState({ challengeId: null, maskedEmail: '', otp: '' });
+  const { user, requestLoginOtp, verifyLoginOtp, loading } = useAuth();
   const nav = useNavigate();
+  const location = useLocation();
+  const shownOauthError = useRef('');
 
   const socialBaseUrl = getSocialBaseUrl();
   const googleLoginUrl =
@@ -66,54 +76,133 @@ export default function Login() {
   const githubLoginUrl =
     env.VITE_GITHUB_LOGIN_URL || joinUrl(socialBaseUrl, '/oauth2/authorization/github');
 
+  useEffect(() => {
+    if (user) {
+      nav(getRedirectTarget(user.role), { replace: true });
+      return;
+    }
+
+    const rawHash = location.hash.startsWith('#') ? location.hash.slice(1) : location.hash;
+    const hashParams = new URLSearchParams(rawHash);
+    const searchParams = new URLSearchParams(location.search);
+    const hasOAuthPayload =
+      searchParams.get('accessToken') ||
+      searchParams.get('token') ||
+      hashParams.get('accessToken') ||
+      hashParams.get('token');
+
+    if (!hasOAuthPayload) return;
+
+    const mergedParams = new URLSearchParams(searchParams);
+    for (const [key, value] of hashParams.entries()) {
+      if (!mergedParams.has(key)) mergedParams.set(key, value);
+    }
+
+    nav(`/oauth2/success?${mergedParams.toString()}`, { replace: true });
+  }, [location.hash, location.search, nav, user]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const oauthError = params.get('error');
+    const message = params.get('message');
+    const toastKey = `${oauthError || ''}:${message || ''}`;
+
+    if (!oauthError || shownOauthError.current === toastKey) return;
+
+    shownOauthError.current = toastKey;
+    toast.error(message || 'Social sign-in failed');
+  }, [location.search]);
+
   const submit = async (event) => {
     event.preventDefault();
-    const auth = await login(form);
+    const challenge = await requestLoginOtp(form);
+    setOtpState({ challengeId: challenge.challengeId, maskedEmail: challenge.maskedEmail, otp: '' });
+    toast.success(challenge.message || 'OTP sent to your email');
+  };
+
+  const verifyOtp = async (event) => {
+    event.preventDefault();
+    const auth = await verifyLoginOtp({ challengeId: otpState.challengeId, otp: otpState.otp });
     nav(auth.role === 'ADMIN' ? '/admin' : auth.role === 'AUTHOR' ? '/author' : '/');
+  };
+
+  const resetOtpFlow = () => {
+    setOtpState({ challengeId: null, maskedEmail: '', otp: '' });
   };
 
   return (
     <Layout>
-      <div className="mx-auto max-w-md card">
-        <h1 className="mb-2 text-3xl font-black">Welcome back</h1>
-        <p className="mb-6 text-slate-500">Login to manage your InkWell account.</p>
+      <div className="flex min-h-[80vh] items-center justify-center px-4 py-12 relative overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/20 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 h-96 w-96 translate-x-1/2 translate-y-1/2 rounded-full bg-purple-500/20 blur-[120px] pointer-events-none" />
+        
+        <div className="w-full max-w-md card relative z-10 border border-slate-200/50 dark:border-slate-800/50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl shadow-2xl">
+          <h1 className="mb-2 text-3xl font-black tracking-tight">Welcome back</h1>
+          <p className="mb-8 text-slate-500 dark:text-slate-400">Login to manage your InkWell account.</p>
 
+          {otpState.challengeId ? (
+            <form onSubmit={verifyOtp} className="grid gap-5">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                OTP sent to {otpState.maskedEmail || 'your email'}.
+              </div>
+              <input
+                className="input shadow-sm"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="Enter 6-digit OTP"
+                value={otpState.otp}
+                onChange={(event) => setOtpState({ ...otpState, otp: event.target.value.replace(/\D/g, '').slice(0, 6) })}
+                required
+              />
+              <button className="btn-primary mt-2 shadow-indigo-600/30" disabled={loading}>
+                Verify OTP
+              </button>
+              <button className="btn-muted" type="button" onClick={resetOtpFlow} disabled={loading}>
+                Back to login
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={submit} className="grid gap-5">
+              <input
+                className="input shadow-sm"
+                placeholder="Email or username"
+                value={form.emailOrUsername}
+                onChange={(event) => setForm({ ...form, emailOrUsername: event.target.value })}
+                required
+              />
+              <input
+                className="input shadow-sm"
+                type="password"
+                placeholder="Password"
+                value={form.password}
+                onChange={(event) => setForm({ ...form, password: event.target.value })}
+                required
+              />
+              <button className="btn-primary mt-2 shadow-indigo-600/30" disabled={loading}>Send OTP</button>
+            </form>
+          )}
+          
+          <div className="my-8 flex items-center gap-3">
+            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">or</span>
+            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+          </div>
 
+          <div className="grid gap-4">
+            <SocialButton href={googleLoginUrl} label="Continue with Google" onClick={() => (window.location.href = googleLoginUrl)}>
+              <GoogleIcon />
+            </SocialButton>
 
-        <form onSubmit={submit} className="grid gap-4">
-          <input
-            className="input"
-            placeholder="Email or username"
-            value={form.emailOrUsername}
-            onChange={(event) => setForm({ ...form, emailOrUsername: event.target.value })}
-          />
-          <input
-            className="input"
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={(event) => setForm({ ...form, password: event.target.value })}
-          />
-          <button className="btn-primary">Login</button>
-        </form>
-        <div className="my-6 flex items-center gap-3">
-          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">or</span>
-          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+            <SocialButton href={githubLoginUrl} label="Continue with GitHub" onClick={() => (window.location.href = githubLoginUrl)}>
+              <GitHubIcon />
+            </SocialButton>
+          </div>
+          
+          <p className="mt-8 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
+            New here? <Link className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400" to="/register">Create account</Link>
+          </p>
         </div>
-
-        <div className="grid gap-3">
-          <SocialButton href={googleLoginUrl} label="Continue with Google" onClick={() => (window.location.href = googleLoginUrl)}>
-            <GoogleIcon />
-          </SocialButton>
-
-          <SocialButton href={githubLoginUrl} label="Continue with GitHub" onClick={() => (window.location.href = githubLoginUrl)}>
-            <GitHubIcon />
-          </SocialButton>
-        </div>
-        <p className="mt-4 text-sm">
-          New here? <Link className="text-indigo-600" to="/register">Create account</Link>
-        </p>
       </div>
     </Layout>
   );

@@ -91,6 +91,7 @@ export default function MediaUploader({
   const [altText, setAltText] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -146,10 +147,24 @@ export default function MediaUploader({
     onFeaturedChange?.(url);
   };
 
-  const removeMedia = (item) => {
+  const removeMedia = async (item) => {
+    const id = item?.id;
     const url = item?.url;
-    onChange?.(selectedUrls.filter((existingUrl) => existingUrl !== url));
-    if (featuredImageUrl === url) onFeaturedChange?.('');
+    if (!id) {
+      toast.error('Unable to delete this media item');
+      return;
+    }
+
+    try {
+      setDeletingId(id);
+      await mediaApi.deleteMedia(id);
+      setItems((currentItems) => currentItems.filter((currentItem) => currentItem.id !== id));
+      onChange?.(selectedUrls.filter((existingUrl) => existingUrl !== url));
+      if (featuredImageUrl === url) onFeaturedChange?.('');
+      toast.success('Media deleted');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const uploadMedia = async () => {

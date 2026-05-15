@@ -32,7 +32,7 @@ const serviceBaseUrls = {
   auth: env.VITE_AUTH_API_URL || env.VITE_API_BASE_URL || `${DEFAULT_ORIGIN}:8080`,
   posts: env.VITE_POST_API_URL || `${DEFAULT_ORIGIN}:8082`,
   comments: env.VITE_COMMENT_API_URL || `${DEFAULT_ORIGIN}:8083`,
-  categories: env.VITE_CATEGORY_API_URL || `${DEFAULT_ORIGIN}:8084`,
+  categories: env.VITE_CATEGORY_API_URL || `${DEFAULT_ORIGIN}:8081`,
   categoryTaxonomy:
     env.VITE_CATEGORY_TAXONOMY_API_URL ||
     joinUrl(stripKnownPath(env.VITE_CATEGORY_API_URL || '') || gatewayBase || `${DEFAULT_ORIGIN}:8088`, '/api'),
@@ -73,12 +73,13 @@ api.interceptors.request.use((config)=>{
 api.interceptors.response.use(r=>r, e=>{
   const status=e?.response?.status;
   const msg=e?.response?.data?.message || e?.response?.data?.error || e?.message;
+  const silentErrors = Boolean(e?.config?.silentErrors);
   if(status===401){
     tokenStorage.clear();
     if(location.pathname!=='/login') location.href='/login';
-  } else if(status===403) {
+  } else if(status===403 && !silentErrors) {
     toast.error('Access denied');
-  } else if(msg) {
+  } else if(msg && !silentErrors) {
     toast.error(typeof msg==='string'?msg:'Request failed');
   }
   return Promise.reject(e);

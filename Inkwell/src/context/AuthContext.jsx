@@ -31,6 +31,24 @@ export function AuthProvider({children}){
     } finally { setLoading(false); }
   };
 
+  const requestLoginOtp=async(data)=>{
+    setLoading(true);
+    try{
+      return unwrap(await authApi.requestLoginOtp(data));
+    } finally { setLoading(false); }
+  };
+
+  const verifyLoginOtp=async(data)=>{
+    setLoading(true);
+    try{
+      const auth=unwrap(await authApi.verifyLoginOtp(data));
+      tokenStorage.set(auth);
+      setUser({userId:auth.userId, username:auth.username, email:auth.email, role:auth.role});
+      toast.success('Logged in successfully');
+      return auth;
+    } finally { setLoading(false); }
+  };
+
   const register=async(data)=>{
     const auth=unwrap(await authApi.register(data));
     tokenStorage.set(auth);
@@ -46,6 +64,6 @@ export function AuthProvider({children}){
     location.href='/login';
   };
 
-  const value=useMemo(()=>({user,setUser,loading,login,register,logout,isAuthenticated:!!user}),[user,loading]);
+  const value=useMemo(()=>({user,setUser,loading,login,requestLoginOtp,verifyLoginOtp,register,logout,isAuthenticated:!!user}),[user,loading]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
