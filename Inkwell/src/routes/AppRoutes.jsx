@@ -8,6 +8,7 @@ import Register from '../pages/auth/Register.jsx';
 import AccessDenied from '../pages/auth/AccessDenied.jsx';
 import Profile from '../pages/reader/Profile.jsx';
 import Notifications from '../pages/reader/Notifications.jsx';
+import RoleRequests from '../pages/reader/RoleRequests.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 import RoleBasedRoute from './RoleBasedRoute.jsx';
 import AuthorDashboard from '../pages/author/AuthorDashboard.jsx';
@@ -19,6 +20,7 @@ import ManageUsers from '../pages/admin/ManageUsers.jsx';
 import ManagePosts from '../pages/admin/ManagePosts.jsx';
 import ManageCategories from '../pages/admin/ManageCategories.jsx';
 import AdminNotifications from '../pages/admin/AdminNotifications.jsx';
+import ManageRoleRequests from '../pages/admin/ManageRoleRequests.jsx';
 
 export default function AppRoutes(){
   return <Routes>
@@ -33,6 +35,7 @@ export default function AppRoutes(){
     <Route element={<ProtectedRoute/>}>
       <Route path="/profile" element={<Profile/>}/>
       <Route path="/notifications" element={<Notifications/>}/>
+      <Route path="/role-requests" element={<RoleRequests/>}/>
     </Route>
 
     <Route element={<RoleBasedRoute roles={['AUTHOR','ADMIN']}/>}>
@@ -46,6 +49,7 @@ export default function AppRoutes(){
     <Route element={<RoleBasedRoute roles={['ADMIN']}/>}>
       <Route path="/admin" element={<AdminDashboard/>}/>
       <Route path="/admin/users" element={<ManageUsers/>}/>
+      <Route path="/admin/role-requests" element={<ManageRoleRequests/>}/>
       <Route path="/admin/posts" element={<ManagePosts/>}/>
       <Route path="/admin/categories" element={<ManageCategories/>}/>
       <Route path="/admin/notifications" element={<AdminNotifications/>}/>

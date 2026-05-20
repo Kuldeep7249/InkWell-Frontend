@@ -17,6 +17,7 @@ import {
 export const adminItems = [
   { to: '/admin', label: 'Overview' },
   { to: '/admin/users', label: 'Users' },
+  { to: '/admin/role-requests', label: 'Role requests' },
   { to: '/admin/posts', label: 'Posts' },
   { to: '/admin/categories', label: 'Categories' },
   { to: '/admin/notifications', label: 'Notifications' },
