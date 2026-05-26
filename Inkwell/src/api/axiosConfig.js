@@ -90,7 +90,8 @@ api.interceptors.response.use(r=>r, e=>{
   const status=e?.response?.status;
   const msg=extractErrorMessage(e?.response?.data, e?.message);
   const silentErrors = Boolean(e?.config?.silentErrors);
-  if(status===401){
+  const skipAuthRedirect = Boolean(e?.config?.skipAuthRedirect);
+  if(status===401 && !skipAuthRedirect){
     tokenStorage.clear();
     if(location.pathname!=='/login') location.href='/login';
   } else if(status===403 && !silentErrors) {

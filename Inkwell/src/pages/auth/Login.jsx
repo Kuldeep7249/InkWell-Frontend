@@ -5,6 +5,7 @@ import Layout from '../../components/layout/Layout.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 
 const env = import.meta.env;
+const DEFAULT_SOCIAL_AUTH_BASE_URL = 'http://localhost:8088';
 
 function stripKnownPath(url = '') {
   return url.replace(/\/(api|auth)(?:\/.*)?$/i, '').replace(/\/+$/, '');
@@ -19,7 +20,8 @@ function getSocialBaseUrl() {
   return (
     env.VITE_SOCIAL_AUTH_BASE_URL ||
     env.VITE_GATEWAY_API_URL ||
-    stripKnownPath(env.VITE_API_BASE_URL || env.VITE_AUTH_API_URL || '')
+    stripKnownPath(env.VITE_API_BASE_URL || env.VITE_AUTH_API_URL || '') ||
+    DEFAULT_SOCIAL_AUTH_BASE_URL
   );
 }
 
@@ -29,17 +31,16 @@ function getRedirectTarget(role) {
   return '/';
 }
 
-function SocialButton({ href, onClick, label, children }) {
+function SocialButton({ href, label, children }) {
   return (
-    <button
+    <a
       className="btn-muted w-full justify-center border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
-      onClick={onClick}
-      type="button"
-      disabled={!href}
+      href={href}
+      aria-disabled={!href}
     >
       <span className="shrink-0">{children}</span>
       <span>{label}</span>
-    </button>
+    </a>
   );
 }
 
@@ -64,8 +65,7 @@ function GitHubIcon() {
 
 export default function Login() {
   const [form, setForm] = useState({ emailOrUsername: '', password: '' });
-  const [otpState, setOtpState] = useState({ challengeId: null, maskedEmail: '', otp: '' });
-  const { user, requestLoginOtp, verifyLoginOtp, loading } = useAuth();
+  const { user, login, loading } = useAuth();
   const nav = useNavigate();
   const location = useLocation();
   const shownOauthError = useRef('');
@@ -115,19 +115,8 @@ export default function Login() {
 
   const submit = async (event) => {
     event.preventDefault();
-    const challenge = await requestLoginOtp(form);
-    setOtpState({ challengeId: challenge.challengeId, maskedEmail: challenge.maskedEmail, otp: '' });
-    toast.success(challenge.message || 'OTP sent to your email');
-  };
-
-  const verifyOtp = async (event) => {
-    event.preventDefault();
-    const auth = await verifyLoginOtp({ challengeId: otpState.challengeId, otp: otpState.otp });
+    const auth = await login(form);
     nav(auth.role === 'ADMIN' ? '/admin' : auth.role === 'AUTHOR' ? '/author' : '/');
-  };
-
-  const resetOtpFlow = () => {
-    setOtpState({ challengeId: null, maskedEmail: '', otp: '' });
   };
 
   return (
@@ -140,48 +129,24 @@ export default function Login() {
           <h1 className="mb-2 text-3xl font-black tracking-tight">Welcome back</h1>
           <p className="mb-8 text-slate-500 dark:text-slate-400">Login to manage your InkWell account.</p>
 
-          {otpState.challengeId ? (
-            <form onSubmit={verifyOtp} className="grid gap-5">
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                OTP sent to {otpState.maskedEmail || 'your email'}.
-              </div>
-              <input
-                className="input shadow-sm"
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="Enter 6-digit OTP"
-                value={otpState.otp}
-                onChange={(event) => setOtpState({ ...otpState, otp: event.target.value.replace(/\D/g, '').slice(0, 6) })}
-                required
-              />
-              <button className="btn-primary mt-2 shadow-indigo-600/30" disabled={loading}>
-                Verify OTP
-              </button>
-              <button className="btn-muted" type="button" onClick={resetOtpFlow} disabled={loading}>
-                Back to login
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={submit} className="grid gap-5">
-              <input
-                className="input shadow-sm"
-                placeholder="Email or username"
-                value={form.emailOrUsername}
-                onChange={(event) => setForm({ ...form, emailOrUsername: event.target.value })}
-                required
-              />
-              <input
-                className="input shadow-sm"
-                type="password"
-                placeholder="Password"
-                value={form.password}
-                onChange={(event) => setForm({ ...form, password: event.target.value })}
-                required
-              />
-              <button className="btn-primary mt-2 shadow-indigo-600/30" disabled={loading}>Send OTP</button>
-            </form>
-          )}
+          <form onSubmit={submit} className="grid gap-5">
+            <input
+              className="input shadow-sm"
+              placeholder="Email or username"
+              value={form.emailOrUsername}
+              onChange={(event) => setForm({ ...form, emailOrUsername: event.target.value })}
+              required
+            />
+            <input
+              className="input shadow-sm"
+              type="password"
+              placeholder="Password"
+              value={form.password}
+              onChange={(event) => setForm({ ...form, password: event.target.value })}
+              required
+            />
+            <button className="btn-primary mt-2 shadow-indigo-600/30" disabled={loading}>Login</button>
+          </form>
           
           <div className="my-8 flex items-center gap-3">
             <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
@@ -190,11 +155,11 @@ export default function Login() {
           </div>
 
           <div className="grid gap-4">
-            <SocialButton href={googleLoginUrl} label="Continue with Google" onClick={() => (window.location.href = googleLoginUrl)}>
+            <SocialButton href={googleLoginUrl} label="Continue with Google">
               <GoogleIcon />
             </SocialButton>
 
-            <SocialButton href={githubLoginUrl} label="Continue with GitHub" onClick={() => (window.location.href = githubLoginUrl)}>
+            <SocialButton href={githubLoginUrl} label="Continue with GitHub">
               <GitHubIcon />
             </SocialButton>
           </div>

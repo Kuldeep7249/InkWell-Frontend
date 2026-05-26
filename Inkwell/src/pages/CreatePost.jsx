@@ -33,6 +33,7 @@ export default function CreatePost() {
       content: values.content,
       categoryId: values.categoryId,
       tagIds: values.tagIds || [],
+      tagNames: values.tagNames || [],
       featuredImageUrl: values.featuredImageUrl || '',
       mediaUrls: values.mediaUrls || []
     };

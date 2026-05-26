@@ -53,6 +53,8 @@ function blockStateRequest(id, blocked) {
 
 export const authApi={
   register:d=>api.post(`${AUTH_BASE}/register`,d),
+  requestRegisterOtp:d=>api.post(`${AUTH_BASE}/register/request-otp`,d),
+  verifyRegisterOtp:d=>api.post(`${AUTH_BASE}/register/verify-otp`,d,{skipAuthRedirect:true}),
   requestLoginOtp:d=>api.post(`${AUTH_BASE}/login/request-otp`,d),
   verifyLoginOtp:d=>api.post(`${AUTH_BASE}/login/verify-otp`,d),
   login:d=>api.post(`${AUTH_BASE}/login`,d),

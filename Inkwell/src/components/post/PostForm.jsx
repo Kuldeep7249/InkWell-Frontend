@@ -1,8 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { Bold, Heading1, Heading2, Italic, List, ListOrdered, LoaderCircle, Sparkles } from 'lucide-react';
-import { useEffect } from 'react';
+import { Bold, Heading1, Heading2, Italic, List, ListOrdered, LoaderCircle, Plus, Sparkles, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import CategorySelect from '../common/CategorySelect.jsx';
@@ -14,6 +14,7 @@ const formSchema = z.object({
   content: z.string().trim().min(1, 'Content is required'),
   categoryId: z.union([z.number(), z.nan()]).optional().transform((value) => (Number.isNaN(value) ? undefined : value)),
   tagIds: z.array(z.number()).default([]),
+  tagNames: z.array(z.string().trim().min(2, 'Tag must be at least 2 characters').max(100, 'Tag must be 100 characters or less')).default([]),
   featuredImageUrl: z.string().optional(),
   mediaUrls: z.array(z.string()).default([])
 }).superRefine((value, ctx) => {
@@ -63,6 +64,82 @@ function EditorToolbar({ editor, disabled = false }) {
   );
 }
 
+function ManualTagInput({ value = [], onChange, existingTags = [], disabled = false }) {
+  const [draft, setDraft] = useState('');
+  const normalizedValue = Array.isArray(value) ? value : [];
+  const existingNames = useMemo(
+    () => new Set(existingTags.map((tag) => tag?.name?.trim().toLowerCase()).filter(Boolean)),
+    [existingTags]
+  );
+
+  const addTag = () => {
+    const name = draft.trim().replace(/\s+/g, ' ');
+    if (!name || disabled) return;
+
+    const lowerName = name.toLowerCase();
+    const hasManualTag = normalizedValue.some((tagName) => tagName.trim().toLowerCase() === lowerName);
+    if (hasManualTag || existingNames.has(lowerName)) {
+      setDraft('');
+      return;
+    }
+
+    onChange?.([...normalizedValue, name]);
+    setDraft('');
+  };
+
+  const removeTag = (name) => {
+    if (disabled) return;
+    onChange?.(normalizedValue.filter((tagName) => tagName !== name));
+  };
+
+  return (
+    <div className="space-y-3">
+      <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">Add your own tags</label>
+      <div className="flex gap-2">
+        <input
+          className="input"
+          placeholder="Type a tag name"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              addTag();
+            }
+          }}
+          disabled={disabled}
+        />
+        <button
+          className="btn-muted inline-flex shrink-0 items-center gap-2"
+          type="button"
+          onClick={addTag}
+          disabled={disabled || !draft.trim()}
+        >
+          <Plus className="h-4 w-4" />
+          Add
+        </button>
+      </div>
+
+      {normalizedValue.length ? (
+        <div className="flex flex-wrap gap-2">
+          {normalizedValue.map((name) => (
+            <button
+              key={name}
+              type="button"
+              onClick={() => removeTag(name)}
+              className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-700 transition hover:bg-emerald-200"
+              disabled={disabled}
+            >
+              {name}
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function PostForm({
   mode = 'create',
   initialValues,
@@ -79,6 +156,7 @@ export default function PostForm({
       content: initialValues?.content ?? '<p></p>',
       categoryId: initialValues?.categoryId ?? undefined,
       tagIds: initialValues?.tagIds ?? [],
+      tagNames: initialValues?.tagNames ?? [],
       featuredImageUrl: initialValues?.featuredImageUrl ?? '',
       mediaUrls: initialValues?.mediaUrls ?? []
     }
@@ -95,6 +173,7 @@ export default function PostForm({
       content: initialValues?.content ?? '<p></p>',
       categoryId: initialValues?.categoryId ?? undefined,
       tagIds: initialValues?.tagIds ?? [],
+      tagNames: initialValues?.tagNames ?? [],
       featuredImageUrl: initialValues?.featuredImageUrl ?? '',
       mediaUrls: initialValues?.mediaUrls ?? []
     });
@@ -191,6 +270,20 @@ export default function PostForm({
                   />
                 )}
               />
+
+              <Controller
+                control={control}
+                name="tagNames"
+                render={({ field }) => (
+                  <ManualTagInput
+                    value={field.value}
+                    onChange={(value) => field.onChange(value)}
+                    existingTags={tags}
+                    disabled={busy}
+                  />
+                )}
+              />
+              {errors.tagNames ? <p className="text-sm text-rose-600">{errors.tagNames.message}</p> : null}
             </div>
 
             <Controller

@@ -49,12 +49,33 @@ export function AuthProvider({children}){
     } finally { setLoading(false); }
   };
 
+  const requestRegisterOtp=async(data)=>{
+    setLoading(true);
+    try{
+      return unwrap(await authApi.requestRegisterOtp(data));
+    } finally { setLoading(false); }
+  };
+
+  const verifyRegisterOtp=async(data)=>{
+    setLoading(true);
+    try{
+      const auth=unwrap(await authApi.verifyRegisterOtp(data));
+      tokenStorage.set(auth);
+      setUser({userId:auth.userId, username:auth.username, email:auth.email, role:auth.role});
+      toast.success('Account created successfully');
+      return auth;
+    } finally { setLoading(false); }
+  };
+
   const register=async(data)=>{
-    const auth=unwrap(await authApi.register(data));
-    tokenStorage.set(auth);
-    setUser({userId:auth.userId, username:auth.username, email:auth.email, role:auth.role});
-    toast.success('Account created successfully');
-    return auth;
+    setLoading(true);
+    try{
+      const auth=unwrap(await authApi.register(data));
+      tokenStorage.set(auth);
+      setUser({userId:auth.userId, username:auth.username, email:auth.email, role:auth.role});
+      toast.success('Account created successfully');
+      return auth;
+    } finally { setLoading(false); }
   };
 
   const logout=async()=>{
@@ -64,6 +85,18 @@ export function AuthProvider({children}){
     location.href='/login';
   };
 
-  const value=useMemo(()=>({user,setUser,loading,login,requestLoginOtp,verifyLoginOtp,register,logout,isAuthenticated:!!user}),[user,loading]);
+  const value=useMemo(()=>({
+    user,
+    setUser,
+    loading,
+    login,
+    requestLoginOtp,
+    verifyLoginOtp,
+    requestRegisterOtp,
+    verifyRegisterOtp,
+    register,
+    logout,
+    isAuthenticated:!!user
+  }),[user,loading]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

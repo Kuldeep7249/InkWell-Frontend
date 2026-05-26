@@ -25,21 +25,6 @@ function normalizeId(item, keys) {
   return null;
 }
 
-async function syncTaxonomy(postId, currentCategoryIds, currentTagIds, nextCategoryId, nextTagIds) {
-  const nextCategoryIds = nextCategoryId != null ? [nextCategoryId] : [];
-  const categoriesToAdd = nextCategoryIds.filter((categoryId) => !currentCategoryIds.includes(categoryId));
-  const categoriesToRemove = currentCategoryIds.filter((categoryId) => !nextCategoryIds.includes(categoryId));
-  const tagsToAdd = (nextTagIds || []).filter((tagId) => !currentTagIds.includes(tagId));
-  const tagsToRemove = currentTagIds.filter((tagId) => !(nextTagIds || []).includes(tagId));
-
-  await Promise.all([
-    ...categoriesToAdd.map((categoryId) => categoryApi.addCategoryToPost({ postId, categoryId })),
-    ...categoriesToRemove.map((categoryId) => categoryApi.removeCategoryFromPost({ postId, categoryId })),
-    ...tagsToAdd.map((tagId) => tagApi.addTagToPost({ postId, tagId })),
-    ...tagsToRemove.map((tagId) => tagApi.removeTagFromPost({ postId, tagId }))
-  ]);
-}
-
 export default function EditPost() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -78,6 +63,7 @@ export default function EditPost() {
       content: post?.content ?? '<p></p>',
       categoryId: post?.categoryId ?? currentCategoryIds[0],
       tagIds: Array.isArray(post?.tagIds) && post.tagIds.length ? post.tagIds.map(Number) : currentTagIds,
+      tagNames: [],
       featuredImageUrl: post?.featuredImageUrl ?? '',
       mediaUrls
     };
@@ -89,6 +75,7 @@ export default function EditPost() {
       content: values.content,
       categoryId: values.categoryId,
       tagIds: values.tagIds || [],
+      tagNames: values.tagNames || [],
       featuredImageUrl: values.featuredImageUrl || '',
       mediaUrls: values.mediaUrls || []
     };
@@ -96,7 +83,6 @@ export default function EditPost() {
     try {
       setSubmitting(true);
       await postApi.updatePost(id, payload);
-      await syncTaxonomy(id, currentCategoryIds, currentTagIds, values.categoryId, values.tagIds || []);
       toast.success('Post updated');
       navigate('/author/posts');
     } catch (error) {
